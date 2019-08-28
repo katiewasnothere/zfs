@@ -29,6 +29,7 @@ import (
 	"github.com/containerd/containerd/snapshots"
 	"github.com/containerd/containerd/snapshots/storage"
 	zfs "github.com/mistifyio/go-zfs"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
 
@@ -52,8 +53,9 @@ func init() {
 }
 
 type snapshotter struct {
-	dataset *zfs.Dataset
-	ms      *storage.MetaStore
+	dataset   *zfs.Dataset
+	ms        *storage.MetaStore
+	platforms []ocispec.Platform
 }
 
 // NewSnapshotter returns a Snapshotter using zfs. Uses the provided
@@ -79,8 +81,9 @@ func NewSnapshotter(root string) (snapshots.Snapshotter, error) {
 	}
 
 	b := &snapshotter{
-		dataset: dataset,
-		ms:      ms,
+		dataset:   dataset,
+		ms:        ms,
+		platforms: []ocispec.Platform{platforms.DefaultSpec()},
 	}
 	return b, nil
 }
@@ -107,6 +110,10 @@ func destroy(dataset *zfs.Dataset) error {
 
 func destroySnapshot(dataset *zfs.Dataset) error {
 	return dataset.Destroy(zfs.DestroyDeferDeletion)
+}
+
+func (z *snapshotter) SupportedPlatforms(ctx context.Context) ([]ocispec.Platform, error) {
+	return z.platforms, nil
 }
 
 // Stat returns the info for an active or committed snapshot by name or
